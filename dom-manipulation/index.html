@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dynamic Quote Generator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container" aria-labelledby="app-title">
+    <header class="app-header">
+      <h1 id="app-title">Dynamic Quote Generator</h1>
+
+      <div class="toolbar">
+        <!-- Filter -->
+        <label class="filter">
+          <span class="label">Category</span>
+          <select id="categoryFilter" aria-label="Filter by category"></select>
+        </label>
+
+        <!-- Search (optional UX sugar) -->
+        <label class="search">
+          <span class="label">Search</span>
+          <input id="searchInput" type="text" placeholder="Find in quotes…" />
+        </label>
+
+        <!-- Export / Import -->
+        <div class="io">
+          <button id="exportBtn" class="btn btn-ghost">Export JSON</button>
+          <label class="btn btn-ghost">
+            Import JSON
+            <input id="importFile" type="file" accept=".json" hidden />
+          </label>
+        </div>
+      </div>
+    </header>
+
+    <!-- Quote display -->
+    <section class="card">
+      <div class="stack">
+        <blockquote id="quoteDisplay" class="quote" aria-live="polite">
+          <p class="quote__text">Press “Show New Quote” to begin</p>
+          <footer class="quote__meta">— <span class="quote__author">n/a</span> <em class="quote__category">(n/a)</em></footer>
+        </blockquote>
+
+        <div class="actions">
+          <button id="newQuote" class="btn btn-primary">Show New Quote</button>
+          <button id="clearLastViewed" class="btn btn-ghost">Clear Last Viewed (Session)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Add Quote form -->
+    <section class="card">
+      <h2>Add a Quote</h2>
+      <form id="addQuoteForm" autocomplete="off">
+        <div class="grid">
+          <label>
+            <span class="label">Quote</span>
+            <textarea id="newQuoteText" rows="2" placeholder="Enter a new quote" required aria-required="true"></textarea>
+          </label>
+          <label>
+            <span class="label">Author</span>
+            <input id="newQuoteAuthor" type="text" placeholder="e.g., Maya Angelou" required aria-required="true" />
+          </label>
+          <label>
+            <span class="label">Category</span>
+            <input id="newQuoteCategory" type="text" placeholder="e.g., Motivation" required aria-required="true" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">Add Quote</button>
+          <button type="reset" class="btn btn-ghost">Reset</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- List of all quotes (for filter/search) -->
+    <section class="card">
+      <div class="list-header">
+        <h2>All Quotes</h2>
+        <span id="count" class="muted"></span>
+      </div>
+      <ul id="quotesList" class="quotes"></ul>
+      <p id="emptyState" class="muted" hidden>No quotes yet — add one above ✨</p>
+    </section>
+
+    <!-- Sync status -->
+    <section class="card">
+      <h2>Server Sync</h2>
+      <div class="stack">
+        <p class="muted" id="syncInfo">
+          Sync is idle. (This demo uses JSONPlaceholder as a mock API.)
+        </p>
+        <div class="actions">
+          <button id="syncNow" class="btn btn-ghost">Sync Now</button>
+          <label class="switch">
+            <input type="checkbox" id="autoSync" />
+            <span>Auto sync every 30s</span>
+          </label>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

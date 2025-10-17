@@ -463,7 +463,7 @@ async function syncQuotes() {
     }
 
     localStorage.setItem('lastSync', String(Date.now()));
-    notifySync('Sync complete (server data has precedence).', 'success');
+   notifySync('Quotes synced with server!', 'success');
   } catch (err) {
     notifySync('Sync failed. Please try again.', 'error');
     // console.error(err);

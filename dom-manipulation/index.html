@@ -43,6 +43,11 @@
           <footer class="quote__meta">— <span class="quote__author">n/a</span> <em class="quote__category">(n/a)</em></footer>
         </blockquote>
 
+        <button id="exportBtn" onclick="exportToJsonFile()">Export Quotes (JSON)</button>
+
+<input type="file" id="importFile" accept=".json" onchange="importFromJsonFile(event)">
+
+
         <div class="actions">
           <button id="newQuote" class="btn btn-primary">Show New Quote</button>
           <button id="clearLastViewed" class="btn btn-ghost">Clear Last Viewed (Session)</button>

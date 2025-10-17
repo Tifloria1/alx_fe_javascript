@@ -55,6 +55,8 @@
       </div>
     </section>
 
+    
+
     <!-- Add Quote form -->
     <section class="card">
       <h2>Add a Quote</h2>
@@ -107,6 +109,14 @@
         </div>
       </div>
     </section>
+
+    <!-- Category filter -->
+<label for="categoryFilter" class="sr-only">Filter by category</label>
+<select id="categoryFilter" onchange="filterQuotes()">
+  <option value="all">All Categories</option>
+  <!-- JS will populate the rest -->
+</select>
+
   </main>
 
   <script src="script.js"></script>

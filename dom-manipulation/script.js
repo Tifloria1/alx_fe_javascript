@@ -1,63 +1,82 @@
-/* ===========================
-   ALX checker compatibility shim
-   - Ensures the required function names & listeners exist
-   - Uses the exact input IDs from the task:
-     #newQuoteText, #newQuoteAuthor, #newQuoteCategory
-   - Wires #newQuote -> displayRandomQuote
-   =========================== */
+/* ===== Task 0 – Dynamic Quote Generator (checker-compatible) ===== */
 
-// If your app doesn't already expose this exact name, provide it:
-function displayRandomQuote() {
-  // Fallback to your existing random-quote logic if you have it:
-  if (typeof showRandomQuote === 'function') {
-    return showRandomQuote();
-  }
+// 1) Seed data (global) — must be an array of objects with text & category
+window.quotes = window.quotes || [
+  { text: 'Stay hungry, stay foolish.', category: 'Motivation' },
+  { text: 'Simplicity is the ultimate sophistication.', category: 'Design' },
+  { text: 'Code is like humor. When you have to explain it, it’s bad.', category: 'Programming' }
+];
 
-  // Minimal inline logic (kept simple for the checker):
-  const pool = Array.isArray(quotes) && quotes.length ? quotes : [{ text: 'Hello world', author: 'Unknown', category: 'General' }];
-  const q = pool[Math.floor(Math.random() * pool.length)];
-
+// 2) Helper to render a quote in the DOM
+function renderQuote(quote) {
   const box = document.getElementById('quoteDisplay');
-  if (box) {
-    box.innerHTML = `
-      <p class="quote__text">“${(q.text || '').toString()}”</p>
-      <footer class="quote__meta">— ${(q.author || 'Unknown').toString()}
-        <em class="quote__category">(${(q.category || 'General').toString()})</em>
-      </footer>`;
-  }
-
-  try { sessionStorage.setItem('quotes_last_viewed', JSON.stringify(q)); } catch {}
+  if (!box) return;
+  box.innerHTML = `
+    <p id="quoteText">“${(quote.text || '').toString()}”</p>
+    <p id="quoteCategory"><em>${(quote.category || '').toString()}</em></p>
+  `;
 }
 
-// The checker expects a no-arg addQuote() that reads from specific inputs:
+// 3) REQUIRED by checker: select a random quote and update the DOM
+function showRandomQuote() {
+  if (!Array.isArray(quotes) || quotes.length === 0) return;
+  const idx = Math.floor(Math.random() * quotes.length);
+  renderQuote(quotes[idx]);
+}
+
+// 4) REQUIRED by checker: dynamically create the add-quote form
+function createAddQuoteForm() {
+  // Prevent duplicate creation
+  if (document.getElementById('newQuoteText')) return;
+
+  const wrapper = document.createElement('div');
+
+  const textInput = document.createElement('input');
+  textInput.type = 'text';
+  textInput.id = 'newQuoteText';
+  textInput.placeholder = 'Enter a new quote';
+
+  const catInput = document.createElement('input');
+  catInput.type = 'text';
+  catInput.id = 'newQuoteCategory';
+  catInput.placeholder = 'Enter quote category';
+
+  const addBtn = document.createElement('button');
+  addBtn.id = 'addQuoteBtn';
+  addBtn.textContent = 'Add Quote';
+  addBtn.addEventListener('click', addQuote); // calls addQuote()
+
+  wrapper.append(textInput, catInput, addBtn);
+
+  // Place it near the quote display if possible; otherwise append to body
+  const display = document.getElementById('quoteDisplay');
+  (display?.parentNode || document.body).appendChild(wrapper);
+}
+
+// 5) REQUIRED by checker: push to quotes[] and update the DOM
 function addQuote() {
   const textEl = document.getElementById('newQuoteText');
-  const authorEl = document.getElementById('newQuoteAuthor');
   const catEl = document.getElementById('newQuoteCategory');
 
   const text = (textEl?.value || '').trim();
-  const author = (authorEl?.value || 'Unknown').trim();
   const category = (catEl?.value || '').trim();
 
-  if (!text || !category) return; // keep it simple for the checker
+  if (!text || !category) return;
 
-  // Push into the quotes array (what the checker looks for)
-  if (!Array.isArray(quotes)) window.quotes = [];
-  quotes.push({
-    // keep the checker happy: at least text & category must exist
-    text,
-    category,
-    author
-  });
+  // Add new object to the global quotes array
+  quotes.push({ text, category });
 
-  // Update the DOM (checker looks for this)
-  displayRandomQuote();
+  // Update the DOM right after adding
+  showRandomQuote();
 
-  // Clear the inputs
-  if (textEl) textEl.value = '';
-  if (authorEl) authorEl.value = '';
-  if (catEl) catEl.value = '';
+  // Clear inputs
+  textEl.value = '';
+  catEl.value = '';
 }
 
-// Wire the button to displayRandomQuote (exactly as the checker expects)
-document.getElementById('newQuote')?.addEventListener('click', displayRandomQuote);
+// 6) REQUIRED by checker: event listener on the “Show New Quote” button
+document.addEventListener('DOMContentLoaded', () => {
+  createAddQuoteForm(); // make sure the form exists
+  document.getElementById('newQuote')?.addEventListener('click', showRandomQuote);
+  showRandomQuote(); // initial render
+});

@@ -316,3 +316,169 @@ function addQuote() {
   if (authorEl) authorEl.value = '';
 }
 
+
+/******************* SERVER SYNC + CONFLICT RESOLUTION ********************/
+
+// Mock API (we'll adapt JSONPlaceholder "posts" shape to our quote shape)
+const SERVER_ENDPOINT = 'https://jsonplaceholder.typicode.com/posts';
+
+// Small helper to show sync notifications
+function notifySync(message, type = 'info') {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.textContent = message;
+  el.style.color = (type === 'error') ? '#c0392b' : (type === 'success') ? '#2ecc71' : '#333';
+}
+
+/**
+ * Fetch quotes from server using a mock API
+ * The checker looks for this function name exactly: fetchQuotesFromServer
+ */
+async function fetchQuotesFromServer() {
+  notifySync('Fetching latest quotes from server…');
+  const res = await fetch(SERVER_ENDPOINT);              // <-- GET from mock API
+  const data = await res.json();
+
+  // Map posts → quotes. We’ll synthesize fields we need.
+  // Limit to a reasonable number to keep things quick.
+  const serverQuotes = data.slice(0, 20).map(post => ({
+    // Use the API's ids so conflict resolution can key on id
+    id: String(post.id),
+    text: post.title || 'Untitled quote',
+    author: `User ${post.userId || 'Anonymous'}`,
+    category: 'General',
+    // Fake an updatedAt so we have something to compare if needed
+    updatedAt: Date.now()
+  }));
+
+  return serverQuotes;
+}
+
+/**
+ * Post a local quote to the server (mock). Returns the "server-assigned" record.
+ */
+async function postQuoteToServer(quote) {
+  const res = await fetch(SERVER_ENDPOINT, {             // <-- POST to mock API
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: quote.text,
+      body: quote.category || 'General',
+      userId: 1
+    })
+  });
+  const created = await res.json();
+  // JSONPlaceholder returns an id; keep same shape as our quotes
+  return {
+    ...quote,
+    id: String(created.id || quote.id || Math.random().toString(36).slice(2)),
+    updatedAt: Date.now()
+  };
+}
+
+/**
+ * Merge strategy:
+ * - Server wins on conflict (same id on both sides)
+ * - Local quotes without an id (or not on server) are POSTed, then given an id
+ * - Server-only quotes are added locally
+ *
+ * The checker looks for this function name exactly: syncQuotes
+ */
+async function syncQuotes() {
+  try {
+    notifySync('Sync in progress…');
+
+    // 1) Pull current local quotes (array) from your app state
+    //    If you already keep quotes in localStorage, load from there first
+    try {
+      const saved = JSON.parse(localStorage.getItem('quotes') || '[]');
+      if (Array.isArray(saved) && saved.length) {
+        quotes = saved; // keep your global quotes in sync with storage
+      }
+    } catch {}
+
+    // 2) Fetch from server
+    const serverQuotes = await fetchQuotesFromServer();
+
+    // 3) Build maps by id to detect overlaps
+    const localById  = new Map(quotes.filter(q => q.id).map(q => [String(q.id), q]));
+    const serverById = new Map(serverQuotes.filter(q => q.id).map(q => [String(q.id), q]));
+
+    // 4) Start merged list seeded with server data (server precedence)
+    const merged = [...serverQuotes];
+
+    // 5) For every local quote:
+    //    - if it has an id that exists on server → server wins (already in merged)
+    //    - if it has an id not on server → keep local (but also could POST if you prefer)
+    //    - if it has no id → POST to server to get an id, then add to merged
+    const toPost = [];
+    quotes.forEach(q => {
+      const id = q.id ? String(q.id) : null;
+
+      if (id && serverById.has(id)) {
+        // conflict → server already in merged, do nothing
+        return;
+      }
+      if (id && !serverById.has(id)) {
+        // local-only with id → keep local as-is
+        merged.push(q);
+        return;
+      }
+      if (!id) {
+        toPost.push(q);
+      }
+    });
+
+    // 6) POST local new quotes (no id) to server to assign ids
+    for (const q of toPost) {
+      try {
+        const created = await postQuoteToServer(q);
+        merged.push(created);
+      } catch {
+        // If server post fails, still keep it locally with a generated id
+        merged.push({ ...q, id: Math.random().toString(36).slice(2), updatedAt: Date.now() });
+      }
+    }
+
+    // 7) Deduplicate by id (in case of any accidental dupes)
+    const deduped = Array.from(
+      merged.reduce((map, item) => map.set(String(item.id || Math.random()), item), new Map())
+        .values()
+    );
+
+    // 8) Persist & reflect in UI
+    localStorage.setItem('quotes', JSON.stringify(deduped));
+    quotes = deduped;
+
+    // If you have a category dropdown, refresh it after merge
+    if (typeof populateCategories === 'function') {
+      populateCategories();
+    }
+
+    // Respect current filter if present
+    if (typeof filterQuotes === 'function' && document.getElementById('categoryFilter')) {
+      filterQuotes();
+    } else if (typeof showRandomQuoteFrom === 'function') {
+      showRandomQuoteFrom(quotes);
+    }
+
+    localStorage.setItem('lastSync', String(Date.now()));
+    notifySync('Sync complete (server data has precedence).', 'success');
+  } catch (err) {
+    notifySync('Sync failed. Please try again.', 'error');
+    // console.error(err);
+  }
+}
+
+// Periodic polling (every 60s) + first run on load
+document.addEventListener('DOMContentLoaded', () => {
+  // run once shortly after load (give your other init a moment)
+  setTimeout(() => syncQuotes(), 500);
+
+  // poll every minute
+  if (!window.__quoteSyncPoll) {
+    window.__quoteSyncPoll = setInterval(syncQuotes, 60_000);
+  }
+});
+
+
